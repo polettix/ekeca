@@ -1,0 +1,192 @@
+#!/bin/sh
+
+cmd_boot() {
+   cmd_clean
+   cmd_create_rca
+   cmd_create_ica
+}
+
+cmd_clean() {
+   cmd_clean_ca rca
+   cmd_clean_ca ica
+}
+
+cmd_clean_ca() { rm -rf "$1"; }
+
+cmd_reset_ca() {
+   cmd_clean_ca "$1"
+   cmd_create_"$1"
+}
+
+cmd_init_ca() {
+   local ca="$1"
+   mkdir -p "$ca/certificates"
+   touch "$ca"/database
+   [ -e "$ca/database.attr" ] \
+      || printf 'unique_subject = no\n' > "$ca"/database.attr
+   [ -e "$ca/serial" ] || printf '1000\n' > "$ca"/serial
+}
+
+cmd_create_rca() {
+   cmd_init_ca rca
+   cat >rca/openssl.cnf <<'END'
+[ ca ]
+default_ca             = default_ca
+
+[ default_ca ]
+dir                    = rca
+private_key            = $dir/key.pem
+certificate            = $dir/certificate.pem
+database               = $dir/database
+serial                 = $dir/serial
+RANDFILE               = $dir/RANDFILE
+new_certs_dir          = $dir/certificates
+default_days           = 42
+default_md             = sha256
+copy_extensions        = copy
+policy                 = policy
+prompt                 = no
+
+[ policy ]
+countryName             = match
+stateOrProvinceName     = match
+organizationName        = match
+organizationalUnitName  = optional
+commonName              = supplied
+emailAddress            = optional
+
+[ req ]
+default_bits		     = 2048
+prompt                 = no
+distinguished_name     = distinguished_name
+x509_extensions        = ca_extensions
+
+[ distinguished_name ]
+commonName             = Everish Root CA
+countryName            = IT
+stateOrProvinceName    = RM
+localityName           = Roma
+organizationName       = Everish
+organizationalUnitName = Root
+emailAddress           = root.everish@example.com
+
+[ ca_extensions ]
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer:always
+basicConstraints       = critical,CA:true
+keyUsage               = critical,digitalSignature,cRLSign,keyCertSign
+END
+   openssl req -new -x509 -config rca/openssl.cnf \
+      -days 42 -out rca/certificate.pem \
+      -newkey rsa:2048 -nodes -keyout rca/key.pem
+}
+
+cmd_create_ica() {
+   cmd_init_ca ica
+   cat >ica/openssl.cnf <<'END'
+[ ca ]
+default_ca             = default_ca
+
+[ default_ca ]
+dir                    = ica
+private_key            = $dir/key.pem
+certificate            = $dir/certificate.pem
+database               = $dir/database
+serial                 = $dir/serial
+RANDFILE               = $dir/RANDFILE
+new_certs_dir          = $dir/certificates
+default_days           = 42
+default_md             = sha256
+copy_extensions        = copy
+policy                 = policy
+prompt                 = no
+
+[ policy ]
+countryName             = supplied
+stateOrProvinceName     = optional
+organizationName        = optional
+organizationalUnitName  = optional
+commonName              = supplied
+emailAddress            = optional
+
+[ req ]
+default_bits		     = 2048
+prompt                 = no
+distinguished_name     = distinguished_name
+
+[ distinguished_name ]
+commonName             = Everish Intermediate CA
+countryName            = IT
+stateOrProvinceName    = RM
+localityName           = Roma
+organizationName       = Everish
+organizationalUnitName = Intermediate
+emailAddress           = intermediate.everish@example.com
+
+[ server_extensions ]
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer:always
+basicConstraints       = CA:false
+keyUsage               = critical,digitalSignature,keyEncipherment
+extendedKeyUsage       = serverAuth
+END
+   openssl req -new -config ica/openssl.cnf \
+      -days 42 -out ica/certificate-request.pem \
+      -newkey rsa:2048 -nodes -keyout ica/key.pem
+   cmd_rca_sign ica/certificate-request.pem ica/certificate.pem
+}
+
+cmd_create_server() {
+   local srv="${1:-"srv.example.com"}"
+   mkdir -p "$srv"
+   cat >"$srv"/openssl.cnf <<END
+[ req ]
+default_bits		     = 2048
+prompt                 = no
+distinguished_name     = distinguished_name
+req_extensions         = req_extensions
+
+[ distinguished_name ]
+commonName             = "$srv"
+countryName            = IT
+stateOrProvinceName    = RM
+localityName           = Roma
+organizationName       = Everish
+organizationalUnitName = Server
+
+[ req_extensions ]
+subjectAltName         = DNS:localhost, DNS:$srv
+END
+   openssl req -new -config "$srv"/openssl.cnf \
+      -days 42 -out "$srv"/certificate-request.pem \
+      -newkey rsa:2048 -nodes -keyout "$srv"/key.pem
+   cmd_ica_sign "$srv"/certificate-request.pem "$srv"/certificate.pem
+   cat "$srv"/certificate.pem ica/certificate.pem > "$srv"/certificates-chain.crt
+}
+
+cmd_ica_sign() {
+   local csr="$1"
+   local crt="${2:-"${csr%.csr}.crt"}"
+   openssl ca -batch -config ica/openssl.cnf -extensions server_extensions \
+      -notext -in "$csr" -out "$crt"
+}
+
+cmd_rca_sign() {
+   local csr="$1"
+   local crt="${2:-"${csr%.csr}.crt"}"
+   openssl ca -batch -config rca/openssl.cnf -extensions ca_extensions \
+      -notext -in "$csr" -out "$crt"
+}
+
+cmd_everything() {
+   cmd_boot
+   cmd_create_server
+}
+
+main() {
+   local cmd="$1"
+   shift
+   "cmd_$cmd" "$@"
+}
+
+main "$@"
