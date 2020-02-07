@@ -1,88 +1,54 @@
 #!/bin/sh
+#C  Copyright 2020 Flavio Poletti
+#C
+#C  Licensed under the Apache License, Version 2.0 (the "License");
+#C  you may not use this file except in compliance with the License.
+#C  You may obtain a copy of the License at
+#C
+#C      http://www.apache.org/licenses/LICENSE-2.0
+#C
+#C  Unless required by applicable law or agreed to in writing, software
+#C  distributed under the License is distributed on an "AS IS" BASIS,
+#C  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#C  See the License for the specific language governing permissions and
+#C  limitations under the License.
+
 
 cmd_boot() {
+#H - boot
+#H       clean Root and Intermediate CAs if present, then regenerate them
+#H
    cmd_clean
    cmd_create_rca
    cmd_create_ica
 }
 
 cmd_clean() {
-   cmd_clean_ca rca
-   cmd_clean_ca ica
+#H - clean
+#H       clean Root and Intermediate CAs (if present)
+#H
+   _cmd_clean_ca rca
+   _cmd_clean_ca ica
 }
 
-cmd_clean_ca() { rm -rf "$1"; }
+_cmd_clean_ca() { rm -rf "$1"; }
 
-cmd_reset_ca() {
-   cmd_clean_ca "$1"
-   cmd_create_"$1"
+cmd_help() {
+#H - help
+#H       print this help message
+#H
+   printf '%s <subcommand> [<arg> [<arg> [...]]]\n' "$0"
+   printf '\nAvailable subcommands:\n\n'
+   sed -ne 's/^#H \?//p' "$0"
 }
 
-cmd_init_ca() {
-   local ca="$1"
-   mkdir -p "$ca/certificates"
-   touch "$ca"/database
-   [ -e "$ca/database.attr" ] \
-      || printf 'unique_subject = no\n' > "$ca"/database.attr
-   [ -e "$ca/serial" ] || printf '1000\n' > "$ca"/serial
-}
+########################################################################
 
-cmd_create_rca() {
-   cmd_init_ca rca
-   cat >rca/openssl.cnf <<'END'
-[ ca ]
-default_ca             = default_ca
-
-[ default_ca ]
-dir                    = rca
-private_key            = $dir/key.pem
-certificate            = $dir/certificate.pem
-database               = $dir/database
-serial                 = $dir/serial
-RANDFILE               = $dir/RANDFILE
-new_certs_dir          = $dir/certificates
-default_days           = 42
-default_md             = sha256
-copy_extensions        = copy
-policy                 = policy
-prompt                 = no
-
-[ policy ]
-countryName             = match
-stateOrProvinceName     = match
-organizationName        = match
-organizationalUnitName  = optional
-commonName              = supplied
-emailAddress            = optional
-
-[ req ]
-default_bits		     = 2048
-prompt                 = no
-distinguished_name     = distinguished_name
-x509_extensions        = ca_extensions
-
-[ distinguished_name ]
-commonName             = Everish Root CA
-countryName            = IT
-stateOrProvinceName    = RM
-localityName           = Roma
-organizationName       = Everish
-organizationalUnitName = Root
-emailAddress           = root.everish@example.com
-
-[ ca_extensions ]
-subjectKeyIdentifier   = hash
-authorityKeyIdentifier = keyid,issuer:always
-basicConstraints       = critical,CA:true
-keyUsage               = critical,digitalSignature,cRLSign,keyCertSign
-END
-   openssl req -new -x509 -config rca/openssl.cnf \
-      -days 42 -out rca/certificate.pem \
-      -newkey rsa:2048 -nodes -keyout rca/key.pem
-}
-
-cmd_create_ica() {
-   cmd_init_ca ica
+#H - ica_create
+#H       create the Intermediate CA
+#H
+cmd_ica_create() {
+   _cmd_init_ca ica
    cat >ica/openssl.cnf <<'END'
 [ ca ]
 default_ca             = default_ca
@@ -136,8 +102,133 @@ END
    cmd_rca_sign ica/certificate-request.pem ica/certificate.pem
 }
 
-cmd_create_server() {
+#H - ica_reset
+#H       reset the Intermediate CA (delete and re-create)
+#H
+cmd_ica_reset() { _cmd_reset_ca ica; }
+
+#H - ica_sign <certificate-request> [<certificate>]
+#H       sign a `certificate-request`, creating the corresponding
+#H       `certificate`. The name of the certificate will be generated
+#H       automatically if missing.
+#H       This is signing by the Intermediate CA, so it is intended for
+#H       signing Client or Server certificate requests.
+#H
+cmd_ica_sign() {
+   local csr="$1"
+   local crt="${2:-"${csr%.csr}.crt"}"
+   openssl ca -batch -config ica/openssl.cnf -extensions server_extensions \
+      -notext -in "$csr" -out "$crt"
+}
+
+########################################################################
+
+_cmd_init_ca() {
+   local ca="$1"
+   mkdir -p "$ca/certificates"
+   touch "$ca"/database
+   [ -e "$ca/database.attr" ] \
+      || printf 'unique_subject = no\n' > "$ca"/database.attr
+   [ -e "$ca/serial" ] || printf '1000\n' > "$ca"/serial
+}
+
+########################################################################
+
+cmd_rca_create() {
+#H - rca_create
+#H       create the Root CA
+#H
+   _cmd_init_ca rca
+   cat >rca/openssl.cnf <<'END'
+[ ca ]
+default_ca             = default_ca
+
+[ default_ca ]
+dir                    = rca
+private_key            = $dir/key.pem
+certificate            = $dir/certificate.pem
+database               = $dir/database
+serial                 = $dir/serial
+RANDFILE               = $dir/RANDFILE
+new_certs_dir          = $dir/certificates
+default_days           = 42
+default_md             = sha256
+copy_extensions        = copy
+policy                 = policy
+prompt                 = no
+
+[ policy ]
+countryName             = match
+stateOrProvinceName     = match
+organizationName        = match
+organizationalUnitName  = optional
+commonName              = supplied
+emailAddress            = optional
+
+[ req ]
+default_bits		     = 2048
+prompt                 = no
+distinguished_name     = distinguished_name
+x509_extensions        = ca_extensions
+
+[ distinguished_name ]
+commonName             = Everish Root CA
+countryName            = IT
+stateOrProvinceName    = RM
+localityName           = Roma
+organizationName       = Everish
+organizationalUnitName = Root
+emailAddress           = root.everish@example.com
+
+[ ca_extensions ]
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer:always
+basicConstraints       = critical,CA:true
+keyUsage               = critical,digitalSignature,cRLSign,keyCertSign
+END
+   openssl req -new -x509 -config rca/openssl.cnf \
+      -days 42 -out rca/certificate.pem \
+      -newkey rsa:2048 -nodes -keyout rca/key.pem
+}
+
+#H - rca_reset
+#H       reset the Root CA (delete and re-create)
+#H
+cmd_rca_reset() { _cmd_reset_ca rca; }
+
+#H - rca_sign <certificate-request> [<certificate>]
+#H       sign a `certificate-request`, creating the corresponding
+#H       `certificate`. The name of the certificate will be generated
+#H       automatically if missing.
+#H       This is signing by the Root CA, so it is intended for signing
+#H       Intermediate CA certificate requests.
+#H
+cmd_rca_sign() {
+   local csr="$1"
+   local crt="${2:-"${csr%.csr}.crt"}"
+   openssl ca -batch -config rca/openssl.cnf -extensions ca_extensions \
+      -notext -in "$csr" -out "$crt"
+}
+
+_cmd_reset_ca() {
+   _cmd_clean_ca "$1"
+   cmd_create_"$1"
+}
+
+#H - server_create [<common-name> [<alt-name> [...]]]
+#H       create a server certificate. Pass a `common-name` or accept
+#H       the default `srv.example.com`. You can also pass alternative
+#H       names to be set in the certificate as allowed aliases.
+#H
+cmd_server_create() {
    local srv="${1:-"srv.example.com"}"
+   local alt="DNS:$srv"
+   [ $# -eq 0 ] || shift
+   while [ $# -gt 0 ] ; do
+      alt="$alt, DNS:$1"
+      shift
+   done
+
    mkdir -p "$srv"
    cat >"$srv"/openssl.cnf <<END
 [ req ]
@@ -155,37 +246,19 @@ organizationName       = Everish
 organizationalUnitName = Server
 
 [ req_extensions ]
-subjectAltName         = DNS:localhost, DNS:$srv
+subjectAltName         = $alt
 END
    openssl req -new -config "$srv"/openssl.cnf \
       -days 42 -out "$srv"/certificate-request.pem \
       -newkey rsa:2048 -nodes -keyout "$srv"/key.pem
    cmd_ica_sign "$srv"/certificate-request.pem "$srv"/certificate.pem
-   cat "$srv"/certificate.pem ica/certificate.pem > "$srv"/certificates-chain.crt
-}
-
-cmd_ica_sign() {
-   local csr="$1"
-   local crt="${2:-"${csr%.csr}.crt"}"
-   openssl ca -batch -config ica/openssl.cnf -extensions server_extensions \
-      -notext -in "$csr" -out "$crt"
-}
-
-cmd_rca_sign() {
-   local csr="$1"
-   local crt="${2:-"${csr%.csr}.crt"}"
-   openssl ca -batch -config rca/openssl.cnf -extensions ca_extensions \
-      -notext -in "$csr" -out "$crt"
-}
-
-cmd_everything() {
-   cmd_boot
-   cmd_create_server
+   cat "$srv"/certificate.pem ica/certificate.pem \
+      > "$srv"/certificates-chain.crt
 }
 
 main() {
-   local cmd="$1"
-   shift
+   local cmd="${1-"help"}"
+   [ $# -eq 0 ] || shift
    "cmd_$cmd" "$@"
 }
 
