@@ -13,6 +13,10 @@ The bottom line is that sometimes you will have to deal with certificates
 in a proper *Root CA*/*Intermediate CA*/*Server* chain, and having the
 possibility to play with it a bit can be an invaluable tool to learn.
 
+An [asciinema][] can help you figure out what this is about, really:
+
+<script id="asciicast-299207" src="https://asciinema.org/a/299207.js" async></script>
+
 ## Installation
 
 This is just a simple shell script - it should work anywhere you have
@@ -149,3 +153,4 @@ Certificate:
 [OpenSSL]: https://www.openssl.org/
 [etoobusy-openssl]: https://github.polettix.it/ETOOBUSY/tagged/#openssl
 [ETOOBUSY]: https://github.polettix.it/ETOOBUSY
+[asciinema]: https://asciinema.org/
