@@ -19,8 +19,8 @@ cmd_boot() {
 #H       clean Root and Intermediate CAs if present, then regenerate them
 #H
    cmd_clean
-   cmd_create_rca
-   cmd_create_ica
+   cmd_rca_create
+   cmd_ica_create
 }
 
 cmd_clean() {
@@ -212,7 +212,7 @@ cmd_rca_sign() {
 
 _cmd_reset_ca() {
    _cmd_clean_ca "$1"
-   cmd_create_"$1"
+   cmd_"$1"_create
 }
 
 #H - server_create [<common-name> [<alt-name> [...]]]
