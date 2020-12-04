@@ -24,11 +24,11 @@ cmd_check_association() {
       local type="$(_type_of "$file")"
       case "$type" in
          (CERTIFICATE)
-            public="$(openssl x509 -noout -modulus -in "$file" | openssl md5)"
+            public="$(openssl x509 -noout -modulus -in "$file")"
             has_public=1
             ;;
          (PRIVATE\ KEY)
-            private="$(openssl rsa -noout -modulus -in "$file" | openssl md5)"
+            private="$(openssl rsa -noout -modulus -in "$file")"
             has_private=1
             ;;
          (*)
