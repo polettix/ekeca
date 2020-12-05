@@ -13,7 +13,7 @@
 #C  See the License for the specific language governing permissions and
 #C  limitations under the License.
 
-_type_of() { sed -n '/^-*BEGIN/{s/-*BEGIN *//;s/--*//;p;q}' "$1"; }
+_type_of() { sed -n '/^-*\(BEGIN\|END\) /{s/[-A-Z]* *//;s/--* *$//;p}'; }
 
 cmd_check_association() {
 #H - check_association <key> <certificate>
@@ -22,7 +22,7 @@ cmd_check_association() {
 #H
    local has_private private has_public public file
    for file in "$1" "$2" ; do
-      local type="$(_type_of "$file")"
+      local type="$(head -n 1 "$file" | _type_of)"
       case "$type" in
          (CERTIFICATE)
             public="$(openssl x509 -noout -modulus -in "$file")"
@@ -268,28 +268,42 @@ _cmd_init_ca() {
 #H - print <pem-file>
 #H       print a text dump of an input file. It currently supports printing
 #H       certificates, certificate requests and private keys, which is
-#H       also what ekeca is about.
+#H       also what ekeca is about. It also works by providing a file with
+#H       multiple *things* inside.
 #H
 cmd_print() {
-   local input="$1"
-   local type="$(_type_of "$input")"
-   local cmd
-   case "$type" in
-      (CERTIFICATE)
-         cmd=x509
-         ;;
-      (CERTIFICATE\ REQUEST)
-         cmd=req
-         ;;
-      (PRIVATE\ KEY)
-         cmd=rsa
-         ;;
-      (*)
-         printf >&2 '%s\n' "unhandled type '$type'"
-         return 1
-         ;;
-   esac
-   openssl "$cmd" -noout -text -in "$input"
+   local l chunk inside='no' n=0
+   while read l ; do
+      if [ "$inside" = 'yes' ] ; then
+         chunk="$(printf '%s\n%s' "$chunk" "$l")"
+         local type="$(printf %s "$l" | _type_of)"
+         [ -n "$type" ] || continue
+         local cmd
+         case "$type" in
+            (CERTIFICATE)
+               cmd=x509
+               ;;
+            (CERTIFICATE\ REQUEST)
+               cmd=req
+               ;;
+            (PRIVATE\ KEY)
+               cmd=rsa
+               ;;
+            (*)
+               printf >&2 '%s\n' "unhandled type '$type'"
+               return 1
+               ;;
+         esac
+         n=$(( n + 1 ))
+         [ $n -lt 2 ] || printf '\n'
+         printf '# item #%d %s\n' "$n" "$type"
+         printf %s "$chunk" | openssl "$cmd" -noout -text
+         inside='no'
+      elif printf %s "$l" | grep '^-\+BEGIN .*-\+ *$' >/dev/null 2>&1; then
+         chunk="$l"
+         inside='yes'
+      fi
+   done <"$1"
 }
 
 ########################################################################
