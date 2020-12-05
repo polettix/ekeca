@@ -19,6 +19,7 @@ cmd_check_association() {
 #H - check_association <key> <certificate>
 #H       check that a (private) key corresponds to the public key in the
 #H       certificate.
+#H
    local has_private private has_public public file
    for file in "$1" "$2" ; do
       local type="$(_type_of "$file")"
