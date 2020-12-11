@@ -147,6 +147,13 @@ cmd_help() {
    sed -ne 's/^#H \?//p' "$0"
 }
 
+cmd_htpasswd_line() {
+#H - htpasswd_line
+#H       generate a htpasswd-compatible username/password line
+#H
+   printf '%s:%s\n' "$1" "$(openssl passwd -apr1 "$2")"
+}
+
 ########################################################################
 
 #H - ica_create
