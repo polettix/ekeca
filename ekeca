@@ -161,19 +161,19 @@ cmd_htpasswd_line() {
 #H
 cmd_ica_create() {
    _cmd_init_ca ica
-   cat >ica/openssl.cnf <<'END'
+   cat >ica/openssl.cnf <<END
 [ ca ]
 default_ca             = default_ca
 
 [ default_ca ]
 dir                    = ica
-private_key            = $dir/key.pem
-certificate            = $dir/certificate.pem
-database               = $dir/database
-serial                 = $dir/serial
-RANDFILE               = $dir/RANDFILE
-new_certs_dir          = $dir/certificates
-default_days           = 42
+private_key            = \$dir/key.pem
+certificate            = \$dir/certificate.pem
+database               = \$dir/database
+serial                 = \$dir/serial
+RANDFILE               = \$dir/RANDFILE
+new_certs_dir          = \$dir/certificates
+default_days           = ${DAYS:-42}
 default_md             = sha256
 copy_extensions        = copy
 policy                 = policy
@@ -320,19 +320,19 @@ cmd_rca_create() {
 #H       create the Root CA
 #H
    _cmd_init_ca rca
-   cat >rca/openssl.cnf <<'END'
+   cat >rca/openssl.cnf <<END
 [ ca ]
 default_ca             = default_ca
 
 [ default_ca ]
 dir                    = rca
-private_key            = $dir/key.pem
-certificate            = $dir/certificate.pem
-database               = $dir/database
-serial                 = $dir/serial
-RANDFILE               = $dir/RANDFILE
-new_certs_dir          = $dir/certificates
-default_days           = 42
+private_key            = \$dir/key.pem
+certificate            = \$dir/certificate.pem
+database               = \$dir/database
+serial                 = \$dir/serial
+RANDFILE               = \$dir/RANDFILE
+new_certs_dir          = \$dir/certificates
+default_days           = ${DAYS:-42}
 default_md             = sha256
 copy_extensions        = copy
 policy                 = policy
