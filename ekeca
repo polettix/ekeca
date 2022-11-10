@@ -461,6 +461,29 @@ cmd_server_renew() {
       > "$srv"/certificates-chain.pem
 }
 
+#H - server_standalone [<common-name> [<alt-name> [...]]]
+#H       create a standalone server certificate, complete with the Root CA
+#H       certificate to install into the client. This is one-shot with no
+#H       leftovers or space for renewals. Installing the Root CA
+#H       certificate should be fine because we ditch the corresponding
+#H       private key and no further certificates can be generated for it.
+#H
+cmd_server_standalone() {
+   set -eu
+   local srv="${1:-"srv.example.com"}"
+   [ $# -eq 0 ] || shift
+
+   mkdir "$srv"
+   cd "$srv"
+
+   cmd_boot
+   cmd_server_create "$srv" "$@"
+   mv "$srv/key.pem" server.key
+   mv "$srv/certificates-chain.pem" server.crt
+   mv rca/certificate.pem root-for-clients.crt
+   rm -rf rca ica "$srv"
+}
+
 main() {
    local cmd="${1-"help"}"
    [ $# -eq 0 ] || shift
