@@ -367,9 +367,8 @@ authorityKeyIdentifier = keyid,issuer:always
 basicConstraints       = critical,CA:true
 keyUsage               = critical,digitalSignature,cRLSign,keyCertSign
 END
-   openssl req -new -x509 -config rca/openssl.cnf \
-      -days "${DAYS:-42}" -out rca/certificate.pem \
-      -newkey "${NEWKEY:-"rsa:2048"}" -nodes -keyout rca/key.pem
+
+   cmd_rca_update
 }
 
 #H - rca_reset
@@ -389,6 +388,19 @@ cmd_rca_sign() {
    local crt="${2:-"${csr%.csr}.crt"}"
    openssl ca -batch -config rca/openssl.cnf -extensions ca_extensions \
       -notext -in "$csr" -out "$crt"
+}
+
+#H - rca_update
+#H       update a Root CA, reusing the configuration file that is already 
+#H       present but regenerating the rest. Requires the presence of the
+#H       rca subdir.
+#H       This makes it easy to tweak the parameters in the Root CA
+#H       configuration file and generate the certificate from that.
+#H
+cmd_rca_update() {
+   openssl req -new -x509 -config rca/openssl.cnf \
+      -days "${DAYS:-42}" -out rca/certificate.pem \
+      -newkey "${NEWKEY:-"rsa:2048"}" -nodes -keyout rca/key.pem
 }
 
 _cmd_reset_ca() {
