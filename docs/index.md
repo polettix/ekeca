@@ -139,7 +139,92 @@ customized.
 
 <script id="asciicast-299207" src="https://asciinema.org/a/299207.js" async=""></script>
 
+# Printing
 
+[ekeca][] helps printing certificates and keys, also when there are many
+ones in a single file (e.g. in a certificates chain file). This is done
+with command `print`.
+
+Assuming that a certificate for a server `srv.example.com` has been
+generated:
+
+```
+$ ekeca print srv.example.com/certificates-chain.pem | less # see them
+
+$ ekeca print srv.example.com/certificates-chain.pem | grep item
+# item #1 CERTIFICATE
+# item #2 CERTIFICATE
+
+$ ekeca print srv.example.com/key.pem | grep item
+# item #1 PRIVATE KEY
+```
+
+# HtPasswd line
+
+In some occasions it might be useful to generate a `htpasswd`-compatible
+line, holding a username and a hashed password:
+
+```
+$ ekeca help htpasswd_line
+ekeca <subcommand> [<arg> [<arg> [...]]]
+
+Requested subcomand:
+
+- htpasswd_line <username> <password>
+      generate a htpasswd-compatible username/password line
+```
+
+So we just need to provide the username and password on the command
+line:
+
+```
+$ ekeca htpasswd_line foo bar
+foo:$apr1$d7IBqAJw$oc083i1e1akm80o7ooz1g0
+```
+
+It's usually better to avoid leaving passwords (even test ones) in the
+shell's history, so we can use a variable:
+
+```
+$ read -s password
+....
+
+$ ekeca htpasswd_line foo "$password"
+foo:$apr1$r8RnViwf$baM49QI2ZX8zo0gSK.lHn0
+```
+
+# Check association of private key and certificate
+
+When there are many certificates around, it might be that the private
+key and the public certificate configured are mismatched, which prevent
+proper working.
+
+Sub-command `check_association` allows checking exactly this:
+
+```
+$ ekeca help check_association
+ekeca <subcommand> [<arg> [<arg> [...]]]
+
+Requested subcomand:
+
+- check_association <key> <certificate>
+      check that a (private) key corresponds to the public key in the
+      certificate.
+```
+
+Examples:
+
+```
+# this test is good because the key and the certificate are associated
+$ ekeca check_association srv.example.com/key.pem srv.example.com/certificate.pem 
+keys match
+
+# this test fails because we're taking the key from the server and the
+# certificate from the Intermediate CA
+$ ekeca check_association srv.example.com/key.pem ica/certificate.pem 
+MISMATCH private<Modulus=A9059D5B937348B7E5...
+          public<Modulus=BA64695134BDB3B5E6...
+```
 
 # Copyright & License
 
