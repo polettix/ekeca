@@ -28,7 +28,7 @@ cmd_check_association() {
             public="$(openssl x509 -noout -modulus -in "$file")"
             has_public=1
             ;;
-         (PRIVATE\ KEY)
+         (RSA\ PRIVATE\ KEY|PRIVATE\ KEY)
             private="$(openssl rsa -noout -modulus -in "$file")"
             has_private=1
             ;;
