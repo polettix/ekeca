@@ -143,6 +143,16 @@ cmd_client_renew() {
       > "$cli"/certificates-chain.pem
 }
 
+cmd_commands() {
+#H - commands
+#H       print list of supported commands
+#H
+   printf '%s <subcommand> [<arg> [<arg> [...]]]\n' "$0"
+   printf '\nAvailable subcommands:\n'
+   sed --posix -n -e '/^#H -/ { s/^#H \{0,1\}//; p; }' "$0"
+   printf '\n'
+}
+
 cmd_help() {
 #H - help
 #H       print this help message
