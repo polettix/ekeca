@@ -13,7 +13,12 @@
 #C  See the License for the specific language governing permissions and
 #C  limitations under the License.
 
-_type_of() { sed -n '/^-*\(BEGIN\|END\) /{s/[-A-Z]* *//;s/--* *$//;p}'; }
+_type_of() {
+   sed --posix -n \
+      -e '/^--*BEGIN / { s/^-*BEGIN *//; s/--* *$//; p; }' \
+      -e '/^--*END /   { s/^-*END *//  ; s/--* *$//; p; }'
+
+}
 
 cmd_check_association() {
 #H - check_association <key> <certificate>
@@ -144,7 +149,7 @@ cmd_help() {
 #H
    printf '%s <subcommand> [<arg> [<arg> [...]]]\n' "$0"
    printf '\nAvailable subcommands:\n\n'
-   sed -ne 's/^#H \?//p' "$0"
+   sed --posix -n -e '/^#H/ { s/^#H \{0,1\}//; p; }' "$0"
 }
 
 cmd_htpasswd_line() {
