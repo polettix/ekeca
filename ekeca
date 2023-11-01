@@ -154,7 +154,7 @@ cmd_commands() {
 }
 
 cmd_help() {
-#H - help
+#H - help [sub-command [sub-command [...]]]
 #H       print this help message
 #H
    local help="$(help_all)"
