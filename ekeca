@@ -154,7 +154,7 @@ cmd_commands() {
 }
 
 cmd_help() {
-#H - help [sub-command [sub-command [...]]]
+#H - help [<sub-command> [<sub-command> [...]]]
 #H       print this help message
 #H
    local help="$(help_all)"
@@ -173,7 +173,7 @@ cmd_help() {
 }
 
 cmd_htpasswd_line() {
-#H - htpasswd_line
+#H - htpasswd_line <username> <password>
 #H       generate a htpasswd-compatible username/password line
 #H
    printf '%s:%s\n' "$1" "$(openssl passwd -apr1 "$2")"
