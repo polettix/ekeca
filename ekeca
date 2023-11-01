@@ -157,9 +157,19 @@ cmd_help() {
 #H - help
 #H       print this help message
 #H
+   local help="$(help_all)"
    printf '%s <subcommand> [<arg> [<arg> [...]]]\n' "$0"
-   printf '\nAvailable subcommands:\n\n'
-   sed --posix -n -e '/^#H/ { s/^#H \{0,1\}//; p; }' "$0"
+   if [ $# -gt 0 ] ; then
+      if [ $# -eq 1 ]; then
+         printf '\nRequested subcomand:\n\n'
+      else
+         printf '\nRequested subcomands:\n\n'
+      fi
+      printf '%s\n\n' "$help" | help_filter "$@"
+   else
+      printf '\nAvailable subcommands:\n\n'
+      printf '%s\n\n' "$help"
+   fi
 }
 
 cmd_htpasswd_line() {
@@ -318,8 +328,12 @@ cmd_print() {
          esac
          n=$(( n + 1 ))
          [ $n -lt 2 ] || printf '\n'
+         printf '%s%s\n' '####################################' \
+                         '####################################'
          printf '# item #%d %s\n' "$n" "$type"
          printf %s "$chunk" | openssl "$cmd" -noout -text
+         printf '%s%s\n\n' '####################################' \
+                           '####################################'
          inside='no'
       elif printf %s "$l" | grep '^-\+BEGIN .*-\+ *$' >/dev/null 2>&1; then
          chunk="$l"
@@ -509,6 +523,30 @@ cmd_server_standalone() {
    mv "$srv/certificates-chain.pem" server.crt
    mv rca/certificate.pem root-for-clients.crt
    rm -rf rca ica "$srv"
+}
+
+help_all() {
+   sed --posix -n -e '/^#H/ { s/^#H \{0,1\}//; p; }' "$0"
+}
+
+help_filter() {
+   local inside=0 line tmp cmd
+   while IFS= read line ; do
+      cmd="$(printf %s "$line" \
+         | sed --posix -ne '/^- /{s/^- //; s/ .*//; p;}')"
+      if [ -n "$cmd" ] ; then
+         inside=0
+         for tmp in "$@" ; do
+            if [ "$tmp" = "$cmd" ] ; then
+               inside=1
+               break
+            fi
+         done
+      fi
+      if [ $inside -ne 0 ] ; then
+         printf %s\\n "$line"
+      fi
+   done
 }
 
 main() {
