@@ -318,7 +318,7 @@ cmd_print() {
             (CERTIFICATE\ REQUEST)
                cmd=req
                ;;
-            (PRIVATE\ KEY)
+            (RSA\ PRIVATE\ KEY|PRIVATE\ KEY)
                cmd=rsa
                ;;
             (*)
