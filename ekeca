@@ -17,7 +17,27 @@ _type_of() {
    sed --posix -n \
       -e '/^--*BEGIN / { s/^-*BEGIN *//; s/--* *$//; p; }' \
       -e '/^--*END /   { s/^-*END *//  ; s/--* *$//; p; }'
+}
 
+cmd_check () {
+#H - check locator [ server-name ]
+#H       check a remote certificate, calling s_client with sensible args
+#H
+   local locator="$1"
+   local server="${2:-""}"
+   local address_port="$(
+      printf %s "$locator" \
+      | sed -e 's#^https\?://##i;s#/.*##;s#^.*@##'
+   )"
+   if [ -z "$server" ] ; then
+      server="$(printf %s "$address_port" | sed -e 's/:.*//')"
+   fi
+   if ! printf %s "$address_port" | grep ':' >/dev/null 2>&1 ; then
+      address_port="$address_port:443"
+   fi
+   openssl s_client -showcerts -verify_return_error \
+      -servername "$server" "$address_port" \
+      </dev/null 2>&1
 }
 
 cmd_check_association() {
