@@ -13,8 +13,16 @@
 #C  See the License for the specific language governing permissions and
 #C  limitations under the License.
 
+_sed () {
+   if [ "$(uname)" = 'Linux' ] ; then
+      sed --posix "$@"
+   else
+      sed "$@"
+   fi
+}
+
 _type_of() {
-   sed --posix -n \
+   _sed -n \
       -e '/^--*BEGIN / { s/^-*BEGIN *//; s/--* *$//; p; }' \
       -e '/^--*END /   { s/^-*END *//  ; s/--* *$//; p; }'
 }
@@ -27,10 +35,10 @@ cmd_check () {
    local server="${2:-""}"
    local address_port="$(
       printf %s "$locator" \
-      | sed -e 's#^https\?://##i;s#/.*##;s#^.*@##'
+      | _sed -e 's#^https\?://##i;s#/.*##;s#^.*@##'
    )"
    if [ -z "$server" ] ; then
-      server="$(printf %s "$address_port" | sed -e 's/:.*//')"
+      server="$(printf %s "$address_port" | _sed -e 's/:.*//')"
    fi
    if ! printf %s "$address_port" | grep ':' >/dev/null 2>&1 ; then
       address_port="$address_port:443"
@@ -169,7 +177,7 @@ cmd_commands() {
 #H
    printf '%s <subcommand> [<arg> [<arg> [...]]]\n' "$0"
    printf '\nAvailable subcommands:\n'
-   sed --posix -n -e '/^#H -/ { s/^#H \{0,1\}//; p; }' "$0"
+   _sed -n -e '/^#H -/ { s/^#H \{0,1\}//; p; }' "$0"
    printf '\n'
 }
 
@@ -546,14 +554,14 @@ cmd_server_standalone() {
 }
 
 help_all() {
-   sed --posix -n -e '/^#H/ { s/^#H \{0,1\}//; p; }' "$0"
+   _sed -n -e '/^#H/ { s/^#H \{0,1\}//; p; }' "$0"
 }
 
 help_filter() {
    local inside=0 line tmp cmd
    while IFS= read line ; do
       cmd="$(printf %s "$line" \
-         | sed --posix -ne '/^- /{s/^- //; s/ .*//; p;}')"
+         | _sed -n -e '/^- /{s/^- //; s/ .*//; p;}')"
       if [ -n "$cmd" ] ; then
          inside=0
          for tmp in "$@" ; do
