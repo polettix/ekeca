@@ -35,7 +35,7 @@ cmd_check () {
    local server="${2:-""}"
    local address_port="$(
       printf %s "$locator" \
-      | _sed -e 's#^https\?://##i;s#/.*##;s#^.*@##'
+      | _sed -e 's#^[hH][tT][tT][pP][sS]\{0,1\}://##;s#/.*##;s#^.*@##'
    )"
    if [ -z "$server" ] ; then
       server="$(printf %s "$address_port" | _sed -e 's/:.*//')"
